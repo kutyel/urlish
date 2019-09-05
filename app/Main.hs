@@ -9,20 +9,14 @@ import           Data.Text.Encoding     (decodeUtf8, encodeUtf8)
 import qualified Data.Text.Lazy         as TL
 import qualified Database.Redis         as R
 import           Network.URI            (URI, parseURI)
-import qualified System.Random          as SR
+import           System.Random          (randomRIO)
 import           Web.Scotty
 
 alphaNum :: String
-alphaNum = ['A' .. 'Z'] ++ ['0' .. '9']
+alphaNum = ['a' .. 'z'] ++ ['0' .. '9']
 
 randomElement :: String -> IO Char
-randomElement xs = do
-  let maxIndex :: Int
-      maxIndex = length xs - 1
-  -- Right of arrow is IO Int,
-  -- so randomDigit is Int
-  randomDigit <- SR.randomRIO (0, maxIndex)
-  return (xs !! randomDigit)
+randomElement xs = randomRIO (0, length xs - 1) >>= \rand -> return (xs !! rand)
 
 shortyGen :: IO String
 shortyGen = replicateM 7 (randomElement alphaNum)

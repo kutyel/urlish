@@ -63,8 +63,15 @@ app rConn = do
         urlish <- liftIO shortyGen
         let shorty = BC.pack urlish
             uri' = encodeUtf8 (TL.toStrict uri)
-        resp <- liftIO (saveURI rConn shorty uri')
-        html (shortyCreated resp urlish)
+        urz <- liftIO (getURI rConn shorty)
+        case urz of
+          Left reply -> text (TL.pack (show reply))
+          Right mbBS ->
+            case mbBS of
+              Nothing -> do
+                resp <- liftIO (saveURI rConn shorty uri')
+                html (shortyCreated resp urlish)
+              Just _ -> text "hash already in use!"
       Nothing -> text (shortyAintUri uri)
   get "/:short" $ do
     short <- param "short"

@@ -86,6 +86,4 @@ app rConn = do
                   tbs = TL.fromStrict (decodeUtf8 bs)
 
 main :: IO ()
-main = do
-  rConn <- R.connect R.defaultConnectInfo
-  scotty 3000 (app rConn)
+main = R.connect R.defaultConnectInfo >>= \conn -> scotty 3000 (app conn)

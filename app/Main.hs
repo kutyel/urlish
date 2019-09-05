@@ -53,6 +53,7 @@ app rConn = do
     let parsedUri :: Maybe URI
         parsedUri = parseURI (TL.unpack uri)
     case parsedUri of
+      Nothing -> text (shortyAintUri uri)
       Just _ -> do
         urlish <- liftIO shortyGen
         let shorty = BC.pack urlish
@@ -66,7 +67,6 @@ app rConn = do
                 resp <- liftIO (saveURI rConn shorty uri')
                 html (shortyCreated resp urlish)
               Just _ -> text "hash already in use!"
-      Nothing -> text (shortyAintUri uri)
   get "/:short" $ do
     short <- param "short"
     uri <- liftIO (getURI rConn short)

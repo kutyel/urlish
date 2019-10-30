@@ -2,15 +2,19 @@
 
 module Main where
 
-import           Control.Monad          (replicateM)
-import           Control.Monad.IO.Class (liftIO)
-import qualified Data.ByteString.Char8  as BC
-import           Data.Text.Encoding     (decodeUtf8, encodeUtf8)
-import qualified Data.Text.Lazy         as TL
-import qualified Database.Redis         as R
-import           Network.URI            (URI, parseURI)
-import           System.Random          (randomRIO)
-import           Web.Scotty
+import           Control.Monad              (replicateM)
+import           Control.Monad.IO.Class     (liftIO)
+import           Control.Monad.Trans        (lift)
+import           Control.Monad.Trans.Reader (ReaderT, ask, runReaderT)
+import qualified Data.ByteString.Char8      as BC
+import           Data.Text.Encoding         (decodeUtf8, encodeUtf8)
+import qualified Data.Text.Lazy             as TL
+import qualified Database.Redis             as R
+import           Network.URI                (URI, parseURI)
+import           System.Random              (randomRIO)
+import           Web.Scotty.Trans
+
+type ActionR = ActionT TL.Text (ReaderT R.Connection IO)
 
 alphaNum :: String
 alphaNum = ['a' .. 'z'] ++ ['0' .. '9']
@@ -21,16 +25,14 @@ randomElement xs = randomRIO (0, length xs - 1) >>= \rand -> return (xs !! rand)
 shortyGen :: IO String
 shortyGen = replicateM 7 (randomElement alphaNum)
 
-saveURI ::
-     R.Connection
-  -> BC.ByteString
-  -> BC.ByteString
-  -> IO (Either R.Reply R.Status)
-saveURI conn shortURI uri = R.runRedis conn $ R.set shortURI uri
+runDb :: R.Redis (Either R.Reply b) -> ActionR (Either R.Reply b)
+runDb action = lift ask >>= \conn -> liftIO $ R.runRedis conn action
 
-getURI ::
-     R.Connection -> BC.ByteString -> IO (Either R.Reply (Maybe BC.ByteString))
-getURI conn shortURI = R.runRedis conn $ R.get shortURI
+saveURI :: BC.ByteString -> BC.ByteString -> ActionR (Either R.Reply R.Status)
+saveURI shortURI uri = runDb $ R.set shortURI uri
+
+getURI :: BC.ByteString -> ActionR (Either R.Reply (Maybe BC.ByteString))
+getURI shortURI = runDb $ R.get shortURI
 
 linkShorty :: String -> String
 linkShorty shorty =
@@ -46,8 +48,8 @@ shortyAintUri uri = TL.concat [uri, " wasn't a url, did you forget http://?"]
 shortyFound :: TL.Text -> TL.Text
 shortyFound tbs = TL.concat ["<a href=\"", tbs, "\">", tbs, "</a>"]
 
-app :: R.Connection -> ScottyM ()
-app rConn = do
+app :: ScottyT TL.Text (ReaderT R.Connection IO) ()
+app = do
   get "/" $ do
     uri <- param "uri"
     let parsedUri :: Maybe URI
@@ -58,18 +60,18 @@ app rConn = do
         urlish <- liftIO shortyGen
         let shorty = BC.pack urlish
             uri' = encodeUtf8 (TL.toStrict uri)
-        urz <- liftIO (getURI rConn shorty)
+        urz <- getURI shorty
         case urz of
           Left reply -> text (TL.pack (show reply))
           Right mbBS ->
             case mbBS of
               Nothing -> do
-                resp <- liftIO (saveURI rConn shorty uri')
+                resp <- saveURI shorty uri'
                 html (shortyCreated resp urlish)
               Just _ -> text "hash already in use!"
   get "/:short" $ do
     short <- param "short"
-    uri <- liftIO (getURI rConn short)
+    uri <- getURI short
     case uri of
       Left reply -> text (TL.pack (show reply))
       Right mbBS ->
@@ -80,4 +82,5 @@ app rConn = do
                   tbs = TL.fromStrict (decodeUtf8 bs)
 
 main :: IO ()
-main = scotty 3000 . app =<< R.connect R.defaultConnectInfo
+main =
+  flip (scottyT 3000 . flip runReaderT) app =<< R.connect R.defaultConnectInfo

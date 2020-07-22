@@ -1,16 +1,13 @@
-{ mkDerivation, base, bytestring, hedis, mtl, network-uri, random
-, scotty, semigroups, stdenv, text, transformers
-}:
-mkDerivation {
-  pname = "urlish";
-  version = "0.1.0.0";
-  src = ./.;
-  isLibrary = false;
-  isExecutable = true;
-  executableHaskellDepends = [
-    base bytestring hedis mtl network-uri random scotty semigroups text
-    transformers
-  ];
-  description = "URI shortener";
-  license = stdenv.lib.licenses.mit;
+let
+  pkgs = import <nixpkgs> { };
+  nix-pre-commit-hooks = import (builtins.fetchTarball "https://github.com/hercules-ci/nix-pre-commit-hooks/tarball/master");
+ in {
+  project = pkgs.haskellPackages.callPackage ./pkg.nix { };
+  pre-commit-check = nix-pre-commit-hooks.run {
+    src = ./.;
+    hooks = {
+      hlint.enable = true;
+      ormolu.enable = true;
+    };
+  };
 }

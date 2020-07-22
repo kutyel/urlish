@@ -2,17 +2,17 @@
 
 module Main where
 
-import           Control.Monad              (replicateM)
-import           Control.Monad.IO.Class     (liftIO)
-import           Control.Monad.Trans        (lift)
-import           Control.Monad.Trans.Reader (ReaderT, ask, runReaderT)
-import qualified Data.ByteString.Char8      as BC
-import           Data.Text.Encoding         (decodeUtf8, encodeUtf8)
-import qualified Data.Text.Lazy             as TL
-import qualified Database.Redis             as R
-import           Network.URI                (URI, parseURI)
-import           System.Random              (randomRIO)
-import           Web.Scotty.Trans
+import Control.Monad (replicateM)
+import Control.Monad.IO.Class (liftIO)
+import Control.Monad.Trans (lift)
+import Control.Monad.Trans.Reader (ReaderT, ask, runReaderT)
+import qualified Data.ByteString.Char8 as BC
+import Data.Text.Encoding (decodeUtf8, encodeUtf8)
+import qualified Data.Text.Lazy as TL
+import qualified Database.Redis as R
+import Network.URI (URI, parseURI)
+import System.Random (randomRIO)
+import Web.Scotty.Trans
 
 type ActionR = ActionT TL.Text (ReaderT R.Connection IO)
 
@@ -78,8 +78,9 @@ app = do
         case mbBS of
           Nothing -> text "uri not found"
           Just bs -> html (shortyFound tbs)
-            where tbs :: TL.Text
-                  tbs = TL.fromStrict (decodeUtf8 bs)
+            where
+              tbs :: TL.Text
+              tbs = TL.fromStrict (decodeUtf8 bs)
 
 main :: IO ()
 main =

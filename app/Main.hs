@@ -20,10 +20,10 @@ alphaNum :: String
 alphaNum = ['a' .. 'z'] ++ ['0' .. '9']
 
 randomElement :: String -> IO Char
-randomElement xs = randomRIO (0, length xs - 1) >>= \rand -> return (xs !! rand)
+randomElement xs = (xs !!) <$> randomRIO (0, length xs - 1)
 
 shortyGen :: IO String
-shortyGen = replicateM 7 (randomElement alphaNum)
+shortyGen = replicateM 7 $ randomElement alphaNum
 
 runDb :: R.Redis (Either R.Reply b) -> ActionR (Either R.Reply b)
 runDb action = lift ask >>= \conn -> liftIO $ R.runRedis conn action

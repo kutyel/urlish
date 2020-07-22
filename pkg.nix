@@ -1,5 +1,5 @@
 { mkDerivation, base, bytestring, hedis, mtl, network-uri, random
-, scotty, semigroups, stdenv, text, transformers
+, scotty, stdenv, text, transformers
 }:
 mkDerivation {
   pname = "urlish";
@@ -8,8 +8,7 @@ mkDerivation {
   isLibrary = false;
   isExecutable = true;
   executableHaskellDepends = [
-    base bytestring hedis mtl network-uri random scotty semigroups text
-    transformers
+    base bytestring hedis mtl network-uri random scotty text transformers
   ];
   description = "URI shortener";
   license = stdenv.lib.licenses.mit;
